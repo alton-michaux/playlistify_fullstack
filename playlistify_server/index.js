@@ -13,7 +13,7 @@ const scope = process.env.SCOPES
 const authorization_endpoint = process.env.AUTHORIZATION_URI
 const token_endpoint = process.env.TOKEN_ENDPOINT
 const PORT = process.env.PORT
-
+// console.log("🚀 ~ file: index.js:16 ~ process.env:", process.env)
 /**
  * Generates a random string containing numbers and letters
  * @param  {number} length The length of the string
@@ -36,6 +36,28 @@ const app = express();
 app.use(express.static(__dirname + '/public'))
   .use(cors())
   .use(cookieParser());
+
+app.get('/token', function (res, req) {
+  const authOptions = {
+    url: token_endpoint,
+    headers: {
+      'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64'))
+    },
+    form: {
+      grant_type: 'client_credentials'
+    },
+    json: true
+  };
+  console.log("🚀 ~ file: index.js:51 ~ authOptions.token_endpoint:", authOptions)
+  
+  request.post(authOptions, function(error, response, body) {
+    if (!error && response.statusCode === 200) {
+      const access_token = body.access_token;
+      console.log("🚀 ~ file: index.js:56 ~ request.post ~ access_token:", access_token)
+      return access_token
+    }
+  });
+});
 
 app.get('/login', function (req, res) {
 
