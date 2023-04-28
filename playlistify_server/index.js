@@ -37,7 +37,7 @@ app.use(express.static(__dirname + '/public'))
   .use(cors())
   .use(cookieParser());
 
-app.get('/token', function (res, req) {
+app.get('/token', function (req, res) {
   const authOptions = {
     url: token_endpoint,
     headers: {
@@ -48,13 +48,11 @@ app.get('/token', function (res, req) {
     },
     json: true
   };
-  console.log("🚀 ~ file: index.js:51 ~ authOptions.token_endpoint:", authOptions)
   
   request.post(authOptions, function(error, response, body) {
     if (!error && response.statusCode === 200) {
       const access_token = body.access_token;
-      console.log("🚀 ~ file: index.js:56 ~ request.post ~ access_token:", access_token)
-      return access_token
+      res.send(access_token)
     }
   });
 });
