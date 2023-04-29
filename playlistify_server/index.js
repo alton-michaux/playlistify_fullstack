@@ -6,7 +6,6 @@ const axios = require('axios')
 const cors = require('cors');
 const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
-const { Console } = require('console');
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
@@ -70,7 +69,6 @@ app.get('/genres', function (req, res) {
     }
   }).then((genres) => {
     const data = genres.data
-    console.log("🚀 ~ file: index.js:76 ~ .then ~ data:", data)
     res.send(data)
   }).catch((genres) => {
     console.log("🚀 ~ file: index.js:83 ~ res:", genres.message)
