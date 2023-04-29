@@ -6,13 +6,13 @@ const axios = require('axios')
 const cors = require('cors');
 const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
+const qs = require('qs')
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 const redirect_uri = process.env.REDIRECT_URI;
 const scope = process.env.SCOPES
 const authorization_endpoint = process.env.AUTHORIZATION_URI
-const token_endpoint = process.env.TOKEN_ENDPOINT
 const PORT = process.env.PORT
 // console.log("🚀 ~ file: index.js:16 ~ process.env:", process.env)
 /**
@@ -39,29 +39,27 @@ app.use(express.static(__dirname + '/public'))
   .use(cookieParser());
 
 app.get('/token', function (req, res) {
-  const authOptions = {
-    url: token_endpoint,
+  const data = {
+    grant_type: 'client_credentials'
+  }
+
+  axios.post(process.env.TOKEN_ENDPOINT, qs.stringify(data), {
     headers: {
       'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64'))
-    },
-    form: {
-      grant_type: 'client_credentials'
-    },
-    json: true
-  };
-
-  request.post(authOptions, function (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      const access_token = body.access_token;
-      res.send(access_token)
     }
-  });
+  }).then((response) => {
+    const data = response.data.access_token
+    console.log("🚀 ~ file: index.js:53 ~ data:", data)
+    res.send(data)
+  }).catch((response) => {
+    console.log("🚀 ~ file: index.js:56 ~ response:", response.message)
+  })
 });
 
 app.get('/genres', function (req, res) {
   const queryParams = new URLSearchParams(req.query);
 
-  axios.get('https://api.spotify.com/v1/recommendations/available-genre-seeds', {
+  axios.get(process.env.GENRE_ENDPOINT, {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
