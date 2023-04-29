@@ -2,9 +2,11 @@ require('dotenv').config()
 
 const express = require('express');
 const request = require('request');
+const axios = require('axios')
 const cors = require('cors');
 const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
+const { Console } = require('console');
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
@@ -48,13 +50,31 @@ app.get('/token', function (req, res) {
     },
     json: true
   };
-  
-  request.post(authOptions, function(error, response, body) {
+
+  request.post(authOptions, function (error, response, body) {
     if (!error && response.statusCode === 200) {
       const access_token = body.access_token;
       res.send(access_token)
     }
   });
+});
+
+app.get('/genres', function (req, res) {
+  const queryParams = new URLSearchParams(req.query);
+
+  axios.get('https://api.spotify.com/v1/recommendations/available-genre-seeds', {
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${queryParams.get("token")}`,
+    }
+  }).then((genres) => {
+    const data = genres.data
+    console.log("🚀 ~ file: index.js:76 ~ .then ~ data:", data)
+    res.send(data)
+  }).catch((genres) => {
+    console.log("🚀 ~ file: index.js:83 ~ res:", genres.message)
+  })
 });
 
 app.get('/login', function (req, res) {
