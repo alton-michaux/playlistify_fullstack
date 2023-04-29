@@ -4,7 +4,6 @@ const express = require('express');
 const request = require('request');
 const axios = require('axios')
 const cors = require('cors');
-const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
 const qs = require('qs')
 
@@ -50,7 +49,7 @@ app.get('/token', function (req, res) {
     const data = response.data.access_token
     res.send(data)
   }).catch((response) => {
-    res.send({error: response.message})
+    res.send({ error: response.message })
   })
 });
 
@@ -67,7 +66,7 @@ app.get('/genres', function (req, res) {
     const data = response.data
     res.send(data)
   }).catch((response) => {
-    res.send({error: response.message})
+    res.send({ error: response.message })
   })
 });
 
@@ -88,7 +87,7 @@ app.get('/playlists', function (req, res) {
     const data = response.data.items;
     res.send(data)
   }).catch((response) => {
-    res.send({error: response.message})
+    res.send({ error: response.message })
   });
 })
 
@@ -108,7 +107,7 @@ app.get('/playlist', function (req, res) {
     const data = response.data
     res.send(data)
   }).catch((response) => {
-    res.send({error: response.message})
+    res.send({ error: response.message })
   });
 });
 
@@ -125,15 +124,15 @@ app.get('/tracklist', function (req, res) {
     }
   ).then((response) => {
     const data = response.data;
-    res.send(data) 
+    res.send(data)
   }).catch((response) => {
-    res.send({error: response.message})
+    res.send({ error: response.message })
   })
 })
 
-app.get('/song', function(req, res) {
+app.get('/song', function (req, res) {
   const queryParams = new URLSearchParams(req.query);
-  
+
   axios.get(`https://api.spotify.com/v1/tracks/${queryParams.get('trackID')}`,
     {
       headers: {
@@ -152,22 +151,18 @@ app.get('/song', function(req, res) {
 
 app.get('/login', function (req, res) {
 
-  const state = generateRandomString(16);
-  res.cookie(stateKey, state);
+  const queryString = qs.stringify({
+    response_type: 'code',
+    client_id: client_id,
+    scope: scope,
+    redirect_uri: redirect_uri
+  })
 
   // your application requests authorization
-  res.redirect(authorization_endpoint +
-    querystring.stringify({
-      response_type: 'code',
-      client_id: client_id,
-      scope: scope,
-      redirect_uri: redirect_uri,
-      state: state
-    }));
+  res.redirect(authorization_endpoint + queryString);
 });
 
 app.get('/callback', function (req, res) {
-
   // your application requests refresh and access tokens
   // after checking the state parameter
 
@@ -177,7 +172,7 @@ app.get('/callback', function (req, res) {
 
   if (state === null || state !== storedState) {
     res.redirect('/#' +
-      querystring.stringify({
+      qs.stringify({
         error: 'state_mismatch'
       }));
   } else {
@@ -214,13 +209,13 @@ app.get('/callback', function (req, res) {
 
         // we can also pass the token to the browser to make requests from there
         res.redirect('/#' +
-          querystring.stringify({
+          qs.stringify({
             access_token: access_token,
             refresh_token: refresh_token
           }));
       } else {
         res.redirect('/#' +
-          querystring.stringify({
+          qs.stringify({
             error: 'invalid_token'
           }));
       }
