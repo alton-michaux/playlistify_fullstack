@@ -1,11 +1,12 @@
 require('dotenv').config()
 
 const express = require('express');
-const request = require('request');
 const axios = require('axios')
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const qs = require('qs')
+const passport = require('passport')
+const SpotifyStrategy = require('passport-spotify').Strategy;
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
@@ -13,22 +14,23 @@ const redirect_uri = process.env.REDIRECT_URI;
 const scope = process.env.SCOPES
 const authorization_endpoint = process.env.AUTHORIZATION_URI
 const PORT = process.env.PORT
-/**
- * Generates a random string containing numbers and letters
- * @param  {number} length The length of the string
- * @return {string} The generated string
- */
-const generateRandomString = function (length) {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-};
-
-const stateKey = 'spotify_auth_state';
+passport.use(
+  new SpotifyStrategy(
+    {
+      clientID: client_id,
+      clientSecret: client_secret,
+      scope: scope,
+      callbackURL: redirect_uri
+    },
+    function (accessToken, refreshToken, expires_in, profile, done) {
+      User.findOrCreate({ spotifyId: profile.id }, function (err, user) {
+        const data = done(err, user);
+        res.send(data)
+      });
+    }
+  )
+);
 
 const app = express();
 
@@ -149,106 +151,14 @@ app.get('/song', function (req, res) {
   })
 })
 
-app.get('/login', function (req, res) {
-  const state = generateRandomString(16);
-  res.cookie(stateKey, state);
+app.get('/login', passport.authenticate('spotify'));
 
-  const queryString = qs.stringify({
-    response_type: 'code',
-    client_id: client_id,
-    scope: scope,
-    redirect_uri: redirect_uri,
-    state: state
-  })
-
-  // your application requests authorization
-  res.redirect(authorization_endpoint + queryString);
-});
-
-app.get('/callback', function (req, res) {
-  // your application requests refresh and access tokens
-  // after checking the state parameter
-
-  const code = req.query.code || null;
-  const state = req.query.state || null;
-  const storedState = req.cookies ? req.cookies[stateKey] : null;
-
-  if (state === null || state !== storedState) {
-    res.redirect('/#' +
-      qs.stringify({
-        error: 'state_mismatch'
-      }));
-  } else {
-    res.clearCookie(stateKey);
-    const authOptions = {
-      url: token_endpoint,
-      form: {
-        code: code,
-        redirect_uri: redirect_uri,
-        grant_type: 'authorization_code'
-      },
-      headers: {
-        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-      },
-      json: true
-    };
-
-    request.post(authOptions, function (error, response, body) {
-      if (!error && response.statusCode === 200) {
-
-        const access_token = body.access_token,
-          refresh_token = body.refresh_token;
-
-        const options = {
-          url: 'https://api.spotify.com/v1/me',
-          headers: { 'Authorization': 'Bearer ' + access_token },
-          json: true
-        };
-
-        // use the access token to access the Spotify Web API
-        request.get(options, function (error, response, body) {
-          console.log(body);
-        });
-
-        // we can also pass the token to the browser to make requests from there
-        res.redirect('/#' +
-          qs.stringify({
-            access_token: access_token,
-            refresh_token: refresh_token
-          }));
-      } else {
-        res.redirect('/#' +
-          qs.stringify({
-            error: 'invalid_token'
-          }));
-      }
-    });
+app.get('/callback', passport.authenticate('spotify', { failureRedirect: '/login' }),
+  function (req, res) {
+    // Successful authentication, redirect home.
+    res.redirect('/');
   }
-});
-
-app.get('/refresh_token', function (req, res) {
-
-  // requesting access token from refresh token
-  const refresh_token = req.query.refresh_token;
-  const authOptions = {
-    url: token_endpoint,
-    headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
-    form: {
-      grant_type: 'refresh_token',
-      refresh_token: refresh_token
-    },
-    json: true
-  };
-
-  request.post(authOptions, function (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      const access_token = body.access_token;
-      res.send({
-        'access_token': access_token
-      });
-    }
-  });
-});
+);
 
 console.log(`Listening on ${PORT}`);
 
