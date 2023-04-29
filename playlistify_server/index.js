@@ -50,7 +50,7 @@ app.get('/token', function (req, res) {
     const data = response.data.access_token
     res.send(data)
   }).catch((response) => {
-    console.log("🚀 ~ file: index.js:56 ~ response:", response.message)
+    res.send({error: response.message})
   })
 });
 
@@ -63,19 +63,19 @@ app.get('/genres', function (req, res) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${queryParams.get("token")}`,
     }
-  }).then((genres) => {
-    const data = genres.data
+  }).then((response) => {
+    const data = response.data
     res.send(data)
-  }).catch((genres) => {
-    console.log("🚀 ~ file: index.js:83 ~ res:", genres.message)
+  }).catch((response) => {
+    res.send({error: response.message})
   })
 });
 
-app.get('/playlists', function(req, res) {
+app.get('/playlists', function (req, res) {
   const queryParams = new URLSearchParams(req.query);
   const limit = 21;
 
-  const response = axios.get(
+  axios.get(
     `https://api.spotify.com/v1/users/${process.env.USER_ID}/playlists?limit=${limit}&offset=0`,
     {
       headers: {
@@ -86,15 +86,13 @@ app.get('/playlists', function(req, res) {
     }
   ).then((response) => {
     const data = response.data.items;
-    console.log("🚀 ~ file: index.js:89 ~ ).then ~ data:", data)
     res.send(data)
-  }).catch((playlists) => {
-    console.log("🚀 ~ file: index.js:83 ~ res:", playlists.message)
+  }).catch((response) => {
+    res.send({error: response.message})
   });
-  return response
 })
 
-app.get('/playlist', function(req, res) {
+app.get('/playlist', function (req, res) {
   const queryParams = new URLSearchParams(req.query);
 
   axios.get(
@@ -107,11 +105,31 @@ app.get('/playlist', function(req, res) {
       }
     }
   ).then((response) => {
-    res.send(response.data);
+    const data = response.data
+    res.send(data)
   }).catch((response) => {
-    throw new Error(`Error! status: ${response.status}`);
+    res.send({error: response.message})
   });
 });
+
+app.get('/tracklist', function (req, res) {
+  const queryParams = new URLSearchParams(req.query);
+
+  axios.get(`https://api.spotify.com/v1/playlists/${queryParams.get('playlistID')}/tracks`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${queryParams.get('token')}`,
+      },
+    }
+  ).then((response) => {
+    const data = response.data;
+    res.send(data) 
+  }).catch((response) => {
+    res.send({error: response.message})
+  })
+})
 
 app.get('/login', function (req, res) {
 
