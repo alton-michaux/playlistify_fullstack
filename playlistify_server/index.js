@@ -131,6 +131,25 @@ app.get('/tracklist', function (req, res) {
   })
 })
 
+app.get('/song', function(req, res) {
+  const queryParams = new URLSearchParams(req.query);
+  
+  axios.get(`https://api.spotify.com/v1/tracks/${queryParams.get('trackID')}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${queryParams.get('token')}`,
+      },
+    }
+  ).then((response) => {
+    const data = response.data
+    res.send(data)
+  }).catch((response) => {
+    res.send({ error: response.message })
+  })
+})
+
 app.get('/login', function (req, res) {
 
   const state = generateRandomString(16);
