@@ -14,7 +14,6 @@ const redirect_uri = process.env.REDIRECT_URI;
 const scope = process.env.SCOPES
 const authorization_endpoint = process.env.AUTHORIZATION_URI
 const PORT = process.env.PORT
-// console.log("🚀 ~ file: index.js:16 ~ process.env:", process.env)
 /**
  * Generates a random string containing numbers and letters
  * @param  {number} length The length of the string
@@ -49,7 +48,6 @@ app.get('/token', function (req, res) {
     }
   }).then((response) => {
     const data = response.data.access_token
-    console.log("🚀 ~ file: index.js:53 ~ data:", data)
     res.send(data)
   }).catch((response) => {
     console.log("🚀 ~ file: index.js:56 ~ response:", response.message)
@@ -71,6 +69,25 @@ app.get('/genres', function (req, res) {
   }).catch((genres) => {
     console.log("🚀 ~ file: index.js:83 ~ res:", genres.message)
   })
+});
+
+app.get('/playlist', function(req, res) {
+  const queryParams = new URLSearchParams(req.query);
+
+  axios.get(
+    `https://api.spotify.com/v1/playlists/${queryParams.get("playlistID")}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${queryParams.get("token")}`,
+      }
+    }
+  ).then((response) => {
+    res.send(response.data);
+  }).catch((response) => {
+    throw new Error(`Error! status: ${response.status}`);
+  });
 });
 
 app.get('/login', function (req, res) {
