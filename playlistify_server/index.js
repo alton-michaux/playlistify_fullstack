@@ -150,12 +150,15 @@ app.get('/song', function (req, res) {
 })
 
 app.get('/login', function (req, res) {
+  const state = generateRandomString(16);
+  res.cookie(stateKey, state);
 
   const queryString = qs.stringify({
     response_type: 'code',
     client_id: client_id,
     scope: scope,
-    redirect_uri: redirect_uri
+    redirect_uri: redirect_uri,
+    state: state
   })
 
   // your application requests authorization
