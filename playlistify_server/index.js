@@ -71,6 +71,29 @@ app.get('/genres', function (req, res) {
   })
 });
 
+app.get('/playlists', function(req, res) {
+  const queryParams = new URLSearchParams(req.query);
+  const limit = 21;
+
+  const response = axios.get(
+    `https://api.spotify.com/v1/users/${process.env.USER_ID}/playlists?limit=${limit}&offset=0`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${queryParams.get('token')}`,
+      }
+    }
+  ).then((response) => {
+    const data = response.data.items;
+    console.log("🚀 ~ file: index.js:89 ~ ).then ~ data:", data)
+    res.send(data)
+  }).catch((playlists) => {
+    console.log("🚀 ~ file: index.js:83 ~ res:", playlists.message)
+  });
+  return response
+})
+
 app.get('/playlist', function(req, res) {
   const queryParams = new URLSearchParams(req.query);
 
