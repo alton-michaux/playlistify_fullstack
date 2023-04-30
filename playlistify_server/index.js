@@ -12,7 +12,6 @@ const utils = require('./utils/authUtils');
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 const redirect_uri = process.env.REDIRECT_URI;
-const profile_endpoint = process.env.PROFILE_ENDPOINT;
 const scope = process.env.SCOPES;
 const authorization_endpoint = process.env.AUTHORIZATION_URI;
 const PORT = process.env.PORT;
@@ -155,39 +154,27 @@ app.get('/login', function (req, res) {
 app.get('/callback', function (req, res) {
   const queryParams = new URLSearchParams(req.query);
 
-  if ((queryParams.get('state')) === null) {
-    res.redirect('/#' +
-      qs.stringify({
-        error: 'state_mismatch'
-      }));
-  } else {
-    const authOptions = {
-      url: profile_endpoint,
-      form: {
-        code: queryParams.get('code'),
-        state: queryParams.get('state'),
-        grant_type: 'authorization_code'
-      },
-      headers: {
-        'Authorization': 'Basic ' + (new Buffer.fromn(client_id + ':' + client_secret).toString('base64'))
-      },
-      json: true
-    };
-    axios.post(authOptions.url,
-      queryString.stringify({
-        grant_type: authOptions.form.grant_type,
-        code: authOptions.form.code,
-        state: authOptions.form.state,
-        redirect_uri: redirect_uri,
-      }), 
-      authOptions.headers
-    ).then((response) => {
-      console.log("🚀 ~ file: index.js:185 ~ ).then ~ response:", response)
-      res.send(response.data)
-    }).catch((response) => {
-      res.send({ error: response.message })
-    });
+  const data = {
+    grant_type: 'authorization_code',
+    code: queryParams.get('code'),
+    redirect_uri: redirect_uri,
   }
+
+  if ((queryParams.get('state')) === null) {
+    res.send({ error: 'state mismatch' });
+  }
+
+  axios.post(process.env.TOKEN_ENDPOINT,qs.stringify(data), {
+    headers: {
+      'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64')),
+      "Content-Type": "application/x-www-form-urlencoded"
+    }
+  }
+  ).then((response) => {
+    res.send(response.data)
+  }).catch((response) => {
+    res.send({ error: response.message })
+  });
 });
 
 console.log(`Listening on ${PORT}`);
