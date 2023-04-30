@@ -1,12 +1,13 @@
 require('dotenv').config()
 
+const proxy = require('./setup/setupProxy')
+
 const express = require('express');
 const axios = require('axios')
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const qs = require('qs')
-const passport = require('passport')
-const SpotifyStrategy = require('passport-spotify').Strategy;
+const utils = require('./utils/authUtils');
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
@@ -15,28 +16,11 @@ const scope = process.env.SCOPES
 const authorization_endpoint = process.env.AUTHORIZATION_URI
 const PORT = process.env.PORT
 
-passport.use(
-  new SpotifyStrategy(
-    {
-      clientID: client_id,
-      clientSecret: client_secret,
-      scope: scope,
-      callbackURL: redirect_uri
-    },
-    function (accessToken, refreshToken, expires_in, profile, done) {
-      User.findOrCreate({ spotifyId: profile.id }, function (err, user) {
-        const data = done(err, user);
-        res.send(data)
-      });
-    }
-  )
-);
-
 const app = express();
 
 app.use(express.static(__dirname + '/public'))
-  .use(cors())
-  .use(cookieParser());
+  .use(cors({ origin: 'http://localhost:3000', proxy: proxy }))
+  .use(cookieParser())
 
 app.get('/token', function (req, res) {
   const data = {
@@ -151,16 +135,33 @@ app.get('/song', function (req, res) {
   })
 })
 
-app.get('/login', passport.authenticate('spotify'));
+app.get('/login', function (req, res) {
+  const state = utils.authUtils.randomString(16)
+  const stateKey = utils.authUtils.stateKey;
+  res.cookie(stateKey, state);
 
-app.get('/callback', passport.authenticate('spotify', { failureRedirect: '/login' }),
-  function (req, res) {
-    // Successful authentication, redirect home.
-    res.redirect('/');
-  }
+  const queryString = qs.stringify({
+    client_id: client_id,
+    response_type: 'code',
+    redirect_uri: redirect_uri,
+    state: state,
+    scope: scope,
+  })
+
+  res.send(`${authorization_endpoint}${queryString}`)
+});
+
+app.get('/callback', function (req, res) {
+  const queryParams = new URLSearchParams(req.query);
+  console.log("🚀 ~ file: index.js:154 ~ req:", queryParams)
+  // Successful authentication, redirect home.
+  res.redirect('/');
+}
 );
 
 console.log(`Listening on ${PORT}`);
+
+app.options('*', cors())
 
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
