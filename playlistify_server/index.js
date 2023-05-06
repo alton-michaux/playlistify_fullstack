@@ -14,6 +14,8 @@ const client_secret = process.env.CLIENT_SECRET;
 const redirect_uri = process.env.REDIRECT_URI;
 const scope = process.env.SCOPES;
 const authorization_endpoint = process.env.AUTHORIZATION_URI;
+const profile_endpoint = process.env.PROFILE_ENDPOINT;
+const token_endpoint = process.env.TOKEN_ENDPOINT
 const PORT = process.env.PORT;
 
 const app = express();
@@ -148,33 +150,77 @@ app.get('/login', function (req, res) {
     scope: scope,
   })
 
-  res.send(`${authorization_endpoint}${queryString}`)
+  res.headers = { 'Access-Control-Allow-Origin': '*' }
+
+  return res.redirect(`${authorization_endpoint}${queryString}`)
 });
 
 app.get('/callback', function (req, res) {
+  console.log('callback')
+  const storedState = req.cookies ? req.cookies[stateKey] : null
+
   const queryParams = new URLSearchParams(req.query);
 
-  const data = {
-    grant_type: 'authorization_code',
-    code: queryParams.get('code'),
-    redirect_uri: redirect_uri,
+  const code = queryParams.get('code');
+  const state = queryParams.get('state');
+
+  if ((state) === null || state !== storedState) {
+    res.redirect('/#' + qs.stringify({
+      error: 'state_mismatch'
+    }))
+    return;
   }
 
-  if ((queryParams.get('state')) === null) {
-    res.send({ error: 'state mismatch' });
-  }
+  res.clearCookie(stateKey)
 
-  axios.post(process.env.TOKEN_ENDPOINT,qs.stringify(data), {
+  axios({
+    url: token_endpoint,
+    method: 'post',
+    params: {
+      code: code,
+      redirect_uri: redirect_uri,
+      grant_type: 'authorization_code'
+    },
     headers: {
-      'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64')),
-      "Content-Type": "application/x-www-form-urlencoded"
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    auth: {
+      username: client_id,
+      password: client_secret
     }
-  }
-  ).then((response) => {
-    res.send(response.data)
-  }).catch((response) => {
-    res.send({ error: response.message })
-  });
+  }).then(response => {
+    console.log("🚀 ~ file: index.js:196 ~ response:", response)
+
+    const accessToken = response.data.access_token,
+      refreshToken = response.data.refresh_token
+
+    axios({
+      url: profile_endpoint,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      params: {
+        access_token: accessToken,
+        refresh_token: refreshToken
+      }
+    }).then(response => {
+      console.log("🚀 ~ file: index.js:212 ~ response:", response)
+      res.redirect('/#' + qs.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      }))
+    }).catch(err => {
+      console.log("🚀 ~ file: index.js:218 ~ err:", err)
+      res.redirect('/#' + qs.stringify({
+        error: 'invalid token'
+      }))
+      console.log(err)
+    })
+  }).catch(err => {
+    console.log(err)
+  })
 });
 
 console.log(`Listening on ${PORT}`);
