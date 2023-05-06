@@ -21,8 +21,15 @@ const PORT = process.env.PORT;
 const app = express();
 
 app.use(express.static(__dirname + '/public'))
-  .use(cors({ origin: 'http://localhost:3000', proxy: proxy }))
-  .use(cookieParser())
+app.use(cors())
+app.use(cookieParser())
+
+app.use(function (req, res, next) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, PATCH, DELETE, OPTIONS');
+  next();
+});
 
 app.get('/token', function (req, res) {
   const data = {
@@ -150,9 +157,7 @@ app.get('/login', function (req, res) {
     scope: scope,
   })
 
-  res.headers = { 'Access-Control-Allow-Origin': '*' }
-
-  return res.redirect(`${authorization_endpoint}${queryString}`)
+  res.send(`${authorization_endpoint}${queryString}`)
 });
 
 app.get('/callback', function (req, res) {
