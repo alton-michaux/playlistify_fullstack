@@ -161,72 +161,108 @@ app.get('/login', function (req, res) {
 });
 
 app.get('/callback', function (req, res) {
-  console.log('callback')
-  const storedState = req.cookies ? req.cookies[stateKey] : null
-
   const queryParams = new URLSearchParams(req.query);
 
   const code = queryParams.get('code');
   const state = queryParams.get('state');
 
-  if ((state) === null || state !== storedState) {
-    res.redirect('/#' + qs.stringify({
-      error: 'state_mismatch'
-    }))
-    return;
+  if ((state) === null) {
+    res.send({ error: 'state_mismatch' })
   }
 
-  res.clearCookie(stateKey)
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64'))
+  }
 
-  axios({
-    url: token_endpoint,
-    method: 'post',
-    params: {
-      code: code,
-      redirect_uri: redirect_uri,
-      grant_type: 'authorization_code'
-    },
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    auth: {
-      username: client_id,
-      password: client_secret
-    }
+  const data = {
+    code: code,
+    redirect_uri: redirect_uri,
+    grant_type: 'authorization_code'
+  }
+
+  axios.post(token_endpoint, data, {
+    headers: headers
   }).then(response => {
-    console.log("🚀 ~ file: index.js:196 ~ response:", response)
-
     const accessToken = response.data.access_token,
       refreshToken = response.data.refresh_token
 
-    axios({
-      url: profile_endpoint,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      params: {
-        access_token: accessToken,
-        refresh_token: refreshToken
-      }
+    const userHeaders = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Bearer ${access_token}`
+    }
+
+    const userData = {
+      access_token: accessToken,
+      refresh_token: refreshToken
+    }
+
+    axios.get(profile_endpoint, userData, {
+      headers: userHeaders
     }).then(response => {
       console.log("🚀 ~ file: index.js:212 ~ response:", response)
-      res.redirect('/#' + qs.stringify({
-        access_token: accessToken,
-        refresh_token: refreshToken
-      }))
+      res.send(response)
     }).catch(err => {
-      console.log("🚀 ~ file: index.js:218 ~ err:", err)
-      res.redirect('/#' + qs.stringify({
-        error: 'invalid token'
-      }))
-      console.log(err)
+      console.log("🚀 ~ file: index.js:213 ~ err:", err)
+      res.send({ error: err.message })
     })
   }).catch(err => {
-    console.log(err)
+    console.log("🚀 ~ file: index.js:212 ~ err:", err)
+    res.send({ error: err.message })
   })
 });
+
+//   axios({
+//     url: token_endpoint,
+//     method: 'post',
+//     params: {
+//       code: code,
+//       redirect_uri: redirect_uri,
+//       grant_type: 'authorization_code'
+//     },
+//     headers: {
+//       'Accept': 'application/json',
+//       'Content-Type': 'application/x-www-form-urlencoded'
+//     },
+//     auth: {
+//       username: client_id,
+//       password: client_secret
+//     }
+//   }).then(response => {
+//     console.log("🚀 ~ file: index.js:196 ~ response:", response)
+
+//     const accessToken = response.data.access_token,
+//       refreshToken = response.data.refresh_token
+
+//     axios({
+//       url: profile_endpoint,
+//       headers: {
+//         'Accept': 'application/json',
+//         'Content-Type': 'application/x-www-form-urlencoded',
+//       },
+//       params: {
+//         access_token: accessToken,
+//         refresh_token: refreshToken
+//       }
+//     }).then(response => {
+//       console.log("🚀 ~ file: index.js:212 ~ response:", response)
+//       res.redirect('/#' + qs.stringify({
+//         access_token: accessToken,
+//         refresh_token: refreshToken
+//       }))
+//     }).catch(err => {
+//       console.log("🚀 ~ file: index.js:218 ~ err:", err)
+//       res.redirect('/#' + qs.stringify({
+//         error: 'invalid token'
+//       }))
+//       console.log(err)
+//     })
+//   }).catch(err => {
+//     console.log(err)
+//   })
+// });
 
 console.log(`Listening on ${PORT}`);
 
