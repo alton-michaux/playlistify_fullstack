@@ -11,11 +11,14 @@ const utils = require('./utils/authUtils');
 
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
+const user_id = process.env.USER_ID;
 const redirect_uri = process.env.REDIRECT_URI;
 const scope = process.env.SCOPES;
 const authorization_endpoint = process.env.AUTHORIZATION_URI;
 const profile_endpoint = process.env.PROFILE_ENDPOINT;
-const token_endpoint = process.env.TOKEN_ENDPOINT
+const token_endpoint = process.env.TOKEN_ENDPOINT;
+const genres_endpoint = process.env.GENRE_ENDPOINT;
+
 const PORT = process.env.PORT;
 
 const app = express();
@@ -36,7 +39,7 @@ app.get('/token', function (req, res) {
     grant_type: 'client_credentials'
   }
 
-  axios.post(process.env.TOKEN_ENDPOINT, qs.stringify(data), {
+  axios.post(token_endpoint, qs.stringify(data), {
     headers: {
       'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64'))
     }
@@ -51,7 +54,7 @@ app.get('/token', function (req, res) {
 app.get('/genres', function (req, res) {
   const queryParams = new URLSearchParams(req.query);
 
-  axios.get(process.env.GENRE_ENDPOINT, {
+  axios.get(genres_endpoint, {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
@@ -70,7 +73,7 @@ app.get('/playlists', function (req, res) {
   const limit = 21;
 
   axios.get(
-    `https://api.spotify.com/v1/users/${process.env.USER_ID}/playlists?limit=${limit}&offset=0`,
+    `https://api.spotify.com/v1/users/${user_id}/playlists?limit=${limit}&offset=0`,
     {
       headers: {
         Accept: "application/json",
@@ -147,6 +150,7 @@ app.get('/song', function (req, res) {
 app.get('/login', function (req, res) {
   const state = utils.authUtils.randomString(16)
   const stateKey = utils.authUtils.stateKey;
+
   res.cookie(stateKey, state);
 
   const queryString = qs.stringify({
@@ -170,27 +174,22 @@ app.get('/callback', function (req, res) {
     res.send({ error: 'state_mismatch' })
   }
 
-  const body = 'grant_type=authorization_code'
-
   const options = {
     headers: {
-      'Accept': 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Content-Length': body.length,
       'Authorization': Buffer.from(`${client_id}:${client_secret}`, 'utf-8').toString('base64')
     },
     params: {
+      client_id: client_id,
+      client_secret: client_secret,
       code: code,
       redirect_uri: redirect_uri,
       grant_type: 'authorization_code'
-    },
-    body: body
+    }
   }
 
-  axios.post(token_endpoint, {}, {
-    headers: options.headers,
-    params: options.params,
-    body: options.body
+  axios.post(token_endpoint, qs.stringify(options.params), {
+    headers: options.headers
   }).then(response => {
     console.log("🚀 ~ file: index.js:195 ~ response:", response)
     const accessToken = response.data.access_token,
