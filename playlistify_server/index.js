@@ -170,21 +170,29 @@ app.get('/callback', function (req, res) {
     res.send({ error: 'state_mismatch' })
   }
 
-  const headers = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'Authorization': 'Basic ' + (new Buffer.from(client_id + ':' + client_secret).toString('base64'))
+  const body = 'grant_type=authorization_code'
+
+  const options = {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': body.length,
+      'Authorization': Buffer.from(`${client_id}:${client_secret}`, 'utf-8').toString('base64')
+    },
+    params: {
+      code: code,
+      redirect_uri: redirect_uri,
+      grant_type: 'authorization_code'
+    },
+    body: body
   }
 
-  const data = {
-    code: code,
-    redirect_uri: redirect_uri,
-    grant_type: 'authorization_code'
-  }
-
-  axios.post(token_endpoint, data, {
-    headers: headers
+  axios.post(token_endpoint, {}, {
+    headers: options.headers,
+    params: options.params,
+    body: options.body
   }).then(response => {
+    console.log("🚀 ~ file: index.js:195 ~ response:", response)
     const accessToken = response.data.access_token,
       refreshToken = response.data.refresh_token
 
