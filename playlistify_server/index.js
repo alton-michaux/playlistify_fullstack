@@ -149,12 +149,14 @@ app.get('/song', function (req, res) {
 
 app.get('/login', function (req, res) {
   const state = utils.authUtils.randomString(16)
+  console.log("🚀 ~ file: index.js:152 ~ state:", state)
   const stateKey = utils.authUtils.stateKey;
 
   res.cookie(stateKey, state);
 
   const queryString = qs.stringify({
     client_id: client_id,
+    client_secret: client_secret,
     response_type: 'code',
     redirect_uri: redirect_uri,
     state: state,
@@ -191,34 +193,34 @@ app.get('/callback', function (req, res) {
   axios.post(token_endpoint, qs.stringify(options.params), {
     headers: options.headers
   }).then(response => {
-    console.log("🚀 ~ file: index.js:195 ~ response:", response)
     const accessToken = response.data.access_token,
-      refreshToken = response.data.refresh_token
-
+      refreshToken = response.data.refresh_token;
+  
     const userHeaders = {
       'Accept': 'application/json',
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Bearer ${access_token}`
-    }
-
+      'Authorization': `Bearer ${accessToken}` // Corrected variable name here
+    };
+  
     const userData = {
       access_token: accessToken,
       refresh_token: refreshToken
-    }
-
-    axios.get(profile_endpoint, userData, {
-      headers: userHeaders
+    };
+  
+    axios.get(profile_endpoint, {
+      headers: userHeaders,
+      params: userData // Send data as query parameters or in the request body
     }).then(response => {
-      console.log("🚀 ~ file: index.js:212 ~ response:", response)
-      res.send(response)
+      console.log("🚀 ~ file: index.js:212 ~ axios.post ~ response:", response)
+      res.send(response.data); // Send the response data instead of the entire response object
     }).catch(err => {
-      console.log("🚀 ~ file: index.js:213 ~ err:", err)
-      res.send({ error: err.message })
-    })
+      console.log("🚀 ~ file: index.js:215 ~ axios.post ~ err:", err)
+      res.send({ error: err.message });
+    });
   }).catch(err => {
-    console.log("🚀 ~ file: index.js:212 ~ err:", err)
-    res.send({ error: err.message })
-  })
+    console.log("🚀 ~ file: index.js:219 ~ axios.post ~ err:", err)
+    res.send({ error: err.message });
+  });
 });
 
 //   axios({
